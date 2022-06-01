@@ -11,17 +11,16 @@ use pocketmine\data\bedrock\EnchantmentIdMap;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Shulker extends SpawnerEntity
+class Squid extends SpawnerEntity
 {
     public function getName(): string
     {
-        return "Shulker";
+        return "Skeleton Horse";
     }
 
     public function initEntity(CompoundTag $nbt): void
     {
-        $this->setMaxHealth(30);
-        $this->getNetworkProperties()->setInt(2, mt_rand(0, 15));
+        $this->setMaxHealth(10);
         parent::initEntity($nbt);
     }
 
@@ -41,21 +40,23 @@ class Shulker extends SpawnerEntity
                 }
             }
         }
-        return [VanillaItems::SHULKER_SHELL()->setCount(mt_rand(0, 1 * $lootingL))];
+        return [
+            VanillaItems::INK_SAC()->setCount(mt_rand(1, 2 + (1 * $lootingL))),
+        ];
     }
 
-    protected function getInitialSizeInfo(): EntitySizeInfo
+    public function getInitialSizeInfo(): EntitySizeInfo
     {
-        return new EntitySizeInfo(1, 1);
+        return new EntitySizeInfo(0.95, 0.95);
     }
 
     public static function getNetworkTypeId(): string
     {
-        return EntityIds::SHULKER;
+        return EntityIds::SQUID;
     }
 
     public function getXpDropAmount(): int
     {
-        return 5 + mt_rand(1, 3);
+        return mt_rand(1, 3);
     }
 }

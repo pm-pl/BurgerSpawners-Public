@@ -2,31 +2,22 @@
 
 namespace Heisenburger69\BurgerSpawners\utils;
 
-use Heisenburger69\BurgerSpawners\events\SpawnerStackEvent;
-use Heisenburger69\BurgerSpawners\events\SpawnerUnstackEvent;
+use pocketmine\nbt\tag\Tag;
+use pocketmine\player\Player;
+use pocketmine\utils\TextFormat;
+use jojoe77777\FormAPI\CustomForm;
+use jojoe77777\FormAPI\SimpleForm;
+use pocketmine\block\VanillaBlocks;
+use pocketmine\utils\TextFormat as C;
 use Heisenburger69\BurgerSpawners\Main;
 use Heisenburger69\BurgerSpawners\tiles\MobSpawnerTile;
-use Heisenburger69\BurgerSpawners\libs\jojoe77777\FormAPI\CustomForm;
-use Heisenburger69\BurgerSpawners\libs\jojoe77777\FormAPI\SimpleForm;
-use pocketmine\block\Block;
-use pocketmine\item\Item;
-use pocketmine\nbt\tag\IntTag;
-use pocketmine\Player;
-use pocketmine\utils\TextFormat;
-use pocketmine\utils\TextFormat as C;
+use Heisenburger69\BurgerSpawners\events\SpawnerStackEvent;
+use Heisenburger69\BurgerSpawners\events\SpawnerUnstackEvent;
 
 class Forms
 {
+    public static array $usingSpawner = [];
 
-    /**
-     * @var array
-     */
-    public static $usingSpawner = [];
-
-    /**
-     * @param MobSpawnerTile $spawner
-     * @param Player $player
-     */
     public static function sendSpawnerForm(MobSpawnerTile $spawner, Player $player): void
     {
         $form = new SimpleForm(function (Player $player, $data = null) {
@@ -53,7 +44,7 @@ class Forms
         Forms::$usingSpawner[$player->getName()] = $spawner;
 
         $spawnerName = $spawner->getName();
-        $count = $spawner->getCount();
+        $count = $spawner->spawnCount;
 
         $form->setTitle(C::BOLD . C::DARK_BLUE . $spawnerName);
         $form->setContent(C::BOLD . C::AQUA . "Count: " . C::RESET . $count);
@@ -73,13 +64,13 @@ class Forms
                 $spawner = Forms::$usingSpawner[$player->getName()];
                 if ($spawner instanceof MobSpawnerTile) {
 
-                    $entityId = $spawner->getEntityId();
+                    $entityId = $spawner->entityId;
                     $count = (int)$response[1];
-                    if($count < 0) return;
+                    if ($count < 0) return;
 
                     $item = $player->getInventory()->getItemInHand();
 
-                    if ($item->getNamedTag()->hasTag(MobSpawnerTile::ENTITY_ID, IntTag::class) && $item->getNamedTagEntry("EntityID")->getValue() === $entityId) {
+                    if ($item->getNamedTag()->getTag(MobSpawnerTile::ENTITY_ID) !== null && $item->getNamedTag()->getTag(MobSpawnerTile::ENTITY_ID)->getValue() === $entityId) {
                         $stackCount = $item->getCount();
                         $max = $stackCount;
                     } else {
@@ -95,18 +86,18 @@ class Forms
                     }
 
                     $item = $player->getInventory()->getItemInHand();
-                    if ($item->getNamedTag()->hasTag(MobSpawnerTile::ENTITY_ID, IntTag::class) && $item->getNamedTagEntry("EntityID")->getValue() === $entityId) {
+                    if ($item->getNamedTag()->getTag(MobSpawnerTile::ENTITY_ID) !== null && $item->getNamedTag()->getTag(MobSpawnerTile::ENTITY_ID)->getValue() === $entityId) {
                         ($event = new SpawnerStackEvent($player, $spawner, $count))->call();
-                        if($event->isCancelled()) return;
+                        if ($event->isCancelled()) return;
                         $stackCount = $item->getCount();
                         $leftover = $stackCount - $count;
                         if ($leftover > 0) {
                             $item->setCount($leftover);
                             $player->getInventory()->setItemInHand($item);
                         } else {
-                            $player->getInventory()->setItemInHand(Item::get(Item::AIR));
+                            $player->getInventory()->setItemInHand(VanillaBlocks::AIR()->asItem());
                         }
-                        $spawner->setCount($spawner->getCount() + $count);
+                        $spawner->setSpawnCount($spawner->spawnCount + $count);
                     }
                 }
             }
@@ -114,13 +105,13 @@ class Forms
         Forms::$usingSpawner[$player->getName()] = $spawner;
 
         $spawnerName = $spawner->getName();
-        $count = $spawner->getCount();
-        $entityId = $spawner->getEntityId();
+        $count = $spawner->spawnCount;
+        $entityId = $spawner->entityId;
 
         $max = 1;
 
         $item = $player->getInventory()->getItemInHand();
-        if ($item->getNamedTag()->hasTag(MobSpawnerTile::ENTITY_ID, IntTag::class) && $item->getNamedTagEntry("EntityID")->getValue() === $entityId) {
+        if ($item->getNamedTag()->getTag(MobSpawnerTile::ENTITY_ID) instanceof Tag && $item->getNamedTag()->getTag(MobSpawnerTile::ENTITY_ID)->getValue() === $entityId) {
             $stackCount = $item->getCount();
             $max = $stackCount;
         }
@@ -128,8 +119,8 @@ class Forms
         $form->setTitle(C::BOLD . C::DARK_BLUE . $spawnerName);
         $form->addLabel(C::BOLD . C::AQUA . "Count: " . C::RESET . $count);
         $form->addSlider(C::BOLD . C::GOLD . "Number of spawners to add" . C::YELLOW, 1, $max, 1);
-		$player->sendForm($form);
-	}
+        $player->sendForm($form);
+    }
 
     public static function sendRemoveSpawnersForm(Player $player, MobSpawnerTile $spawner): void
     {
@@ -141,25 +132,25 @@ class Forms
                 $spawner = Forms::$usingSpawner[$player->getName()];
                 if ($spawner instanceof MobSpawnerTile) {
 
-                    $entityId = $spawner->getEntityId();
+                    $entityId = $spawner->entityId;
                     $count = (int)$response[1];
-                    if($count <= 0) return;
-                    $max = $spawner->getCount();
+                    if ($count <= 0) return;
+                    $max = $spawner->spawnCount;
 
                     $message = TextFormat::GREEN . "Removed spawners!";
                     if ($count > $max) {
                         $count = $max;
                         $message = ConfigManager::getMessage("all-spawners-removed");
-                        if($message === "") {
+                        if ($message === "") {
                             $message = C::colorize("&aAll available Spawners removed");
                         }
                     }
                     ($event = new SpawnerUnstackEvent($player, $spawner, $count))->call();
-                    if($event->isCancelled()) return;
-                    if($spawner->isClosed()) return;
-                    $spawner->setCount($spawner->getCount() - $count);
-                    if($spawner->getCount() <= 0) {
-                        $spawner->getLevel()->setBlock($spawner, Block::get(Block::AIR));
+                    if ($event->isCancelled()) return;
+                    if ($spawner->isClosed()) return;
+                    $spawner->setSpawnCount($spawner->spawnCount - $count);
+                    if ($spawner->spawnCount <= 0) {
+                        $spawner->getPosition()->getWorld()->setBlock($spawner->getPosition(), VanillaBlocks::AIR());
                         $spawner->close();
                     }
 
@@ -174,11 +165,11 @@ class Forms
         Forms::$usingSpawner[$player->getName()] = $spawner;
 
         $spawnerName = $spawner->getName();
-        $count = $spawner->getCount();
+        $count = $spawner->spawnCount;
 
         $form->setTitle(C::BOLD . C::DARK_BLUE . $spawnerName);
         $form->addLabel(C::BOLD . C::AQUA . "Count: " . C::RESET . $count);
-        if($count > 64) $count = 64;
+        if ($count > 64) $count = 64;
         $form->addSlider(C::BOLD . C::GOLD . "Number of spawners to remove" . C::YELLOW, 1, $count, 1);
         $player->sendForm($form);
     }

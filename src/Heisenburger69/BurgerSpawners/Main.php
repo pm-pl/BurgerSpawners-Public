@@ -4,40 +4,43 @@ declare(strict_types=1);
 
 namespace Heisenburger69\BurgerSpawners;
 
-use Heisenburger69\BurgerSpawners\commands\SpawnerCommand;
-use Heisenburger69\BurgerSpawners\entities\EntityManager;
+use ReflectionProperty;
+use ReflectionException;
+use pocketmine\item\Item;
+use pocketmine\item\ItemIds;
+use ReflectionClassConstant;
+use pocketmine\item\ItemFactory;
+use pocketmine\item\VanillaItems;
+use pocketmine\plugin\PluginBase;
+use pocketmine\block\BlockFactory;
+use pocketmine\block\VanillaBlocks;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntityFactory;
+use pocketmine\block\BlockIdentifier;
+use pocketmine\utils\TextFormat as C;
+use pocketmine\block\tile\TileFactory;
+use pocketmine\item\enchantment\Rarity;
+use pocketmine\item\enchantment\ItemFlags;
+use pocketmine\data\bedrock\EnchantmentIds;
+use pocketmine\item\enchantment\Enchantment;
+use pocketmine\data\bedrock\EnchantmentIdMap;
+use Heisenburger69\BurgerSpawners\utils\Utils;
 use Heisenburger69\BurgerSpawners\items\SpawnEgg;
 use Heisenburger69\BurgerSpawners\items\SpawnerBlock;
-use Heisenburger69\BurgerSpawners\tiles\MobSpawnerTile;
 use Heisenburger69\BurgerSpawners\utils\ConfigManager;
-use Heisenburger69\BurgerSpawners\utils\Utils;
-use pocketmine\block\BlockFactory;
-use pocketmine\entity\Entity;
-use pocketmine\item\Item;
-use pocketmine\item\ItemFactory;
-use pocketmine\nbt\tag\CompoundTag;
-use pocketmine\nbt\tag\IntTag;
-use pocketmine\plugin\PluginBase;
-use pocketmine\tile\Tile;
-use pocketmine\utils\TextFormat as C;
-use ReflectionException;
-use ReflectionProperty;
-use function strtolower;
+use Heisenburger69\BurgerSpawners\tiles\MobSpawnerTile;
+use Heisenburger69\BurgerSpawners\utils\EntityLegacyIds;
+use Heisenburger69\BurgerSpawners\entities\EntityManager;
+use Heisenburger69\BurgerSpawners\commands\SpawnerCommand;
+use pocketmine\item\enchantment\StringToEnchantmentParser;
+use Heisenburger69\BurgerSpawners\commands\SpawnEggCommand;
 
 class Main extends PluginBase
 {
+    public const PREFIX = "§d(§bSpawner§d)§e > §b";
 
-    /** @var string */
-    public const PREFIX = C::BOLD . C::AQUA . "Burger" . C::LIGHT_PURPLE . "Spawners" . "> " . C::RESET;
-
-    /**
-     * @var Main
-     */
     public static Main $instance;
 
-    /**
-     * @var array
-     */
     public array $exemptedEntities = [];
 
     public function onEnable(): void
@@ -46,33 +49,32 @@ class Main extends PluginBase
         $this->saveDefaultConfig();
         $this->getServer()->getPluginManager()->registerEvents(new EventListener($this), $this);
         $this->getServer()->getCommandMap()->register("BurgerSpawners", new SpawnerCommand($this));
+        $this->getServer()->getCommandMap()->register("BurgerSpawners", new SpawnEggCommand($this));
 
-        /** @noinspection PhpUnhandledExceptionInspection */
-        Tile::registerTile(MobSpawnerTile::class, [Tile::MOB_SPAWNER, "minecraft:mob_spawner"]);
-        BlockFactory::registerBlock(new SpawnerBlock(), true);
-        ItemFactory::registerItem(new SpawnEgg(), true);
-        Item::initCreativeItems();
+        TileFactory::getInstance()->register(MobSpawnerTile::class, ['MobSpawner', "BurgerSpawners"]);
+        $oldSpawner = VanillaBlocks::MONSTER_SPAWNER();
+        BlockFactory::getInstance()->register(new SpawnerBlock(new BlockIdentifier($oldSpawner->getId(), 0, ItemIds::MONSTER_SPAWNER, MobSpawnerTile::class), $oldSpawner->getName(), $oldSpawner->getBreakInfo()), true);
+
+        EnchantmentIdMap::getInstance()->register(EnchantmentIds::LOOTING, new Enchantment('Looting', Rarity::COMMON, ItemFlags::SWORD, ItemFlags::NONE, 5));
+        /** @phpstan-ignore-next-line */
+        StringToEnchantmentParser::getInstance()->register('looting', fn () => EnchantmentIdMap::getInstance()->fromId(EnchantmentIds::LOOTING));
 
         if (ConfigManager::getToggle("register-mobs")) {
             EntityManager::init();
         }
 
-        if(is_array(ConfigManager::getArray("exempted-entities"))) {
+        if (is_array(ConfigManager::getArray("exempted-entities"))) {
             foreach (ConfigManager::getArray("exempted-entities") as $entityName) {
                 $this->exemptEntityFromStackingByName($entityName);
             }
         }
     }
 
-    /**
-     * @return array|null
-     * @throws ReflectionException
-     */
     public function getRegisteredEntities(): ?array
     {
-        $reflectionProperty = new ReflectionProperty(Entity::class, 'knownEntities');
+        $reflectionProperty = new ReflectionProperty(EntityFactory::class, 'saveNames');
         $reflectionProperty->setAccessible(true);
-        return $reflectionProperty->getValue();
+        return $reflectionProperty->getValue(EntityFactory::getInstance());
     }
 
     public static function getInstance(): Main
@@ -83,26 +85,53 @@ class Main extends PluginBase
     public function getSpawner(string $name, int $amount): Item
     {
         $name = strtolower($name);
-        $name = str_replace(" ", "", $name);
+        $name = str_replace(" ", "_", $name);
         $entityID = Utils::getEntityIDFromName($name);
+        if (!is_string($entityID)) {
+            return VanillaItems::AIR();
+        }
 
-        $nbt = new CompoundTag("", [
-            new IntTag("EntityID", (int)$entityID)
-        ]);
+        $nbt = new CompoundTag();
+        $nbt->setString(MobSpawnerTile::ENTITY_ID, $entityID);
 
-        $spawner = Item::get(Item::MOB_SPAWNER, 0, $amount, $nbt);
-        $spawnerName = Utils::getEntityNameFromID((int)$entityID) . " Spawner";
+        $spawner = VanillaBlocks::MONSTER_SPAWNER()->asItem();
+        $spawner->setCount($amount);
+        $spawner->setNamedTag($nbt);
+        $spawnerName = Utils::getEntityNameFromID($entityID) . " Spawner";
         $spawner->setCustomName(C::RESET . $spawnerName);
 
         return $spawner;
     }
 
-    /**
-     * @param string $entityName
-     */
+    public function getSpawnEgg(string $name, int $amount): Item
+    {
+        $name = strtolower($name);
+        $entityId = Utils::getEntityIDFromName($name);
+        if (!is_string($entityId)) {
+            return VanillaItems::AIR();
+        }
+
+        try {
+            $reflectionConstant = new ReflectionClassConstant(EntityLegacyIds::class, strtoupper($name));
+            $meta = $reflectionConstant->getValue();
+        } catch (ReflectionException $ex) {
+            return VanillaItems::AIR();
+        }
+
+        $eggName = Utils::getEntityNameFromID($entityId) . " Spawn Egg";
+        $egg = ItemFactory::getInstance()->get(ItemIds::SPAWN_EGG, $meta, $amount);
+        if (!$egg instanceof SpawnEgg) {
+            return VanillaItems::AIR();
+        }
+        
+        $egg->setEntityId($entityId);
+        $egg->setCustomName(C::RESET . $eggName);
+
+        return $egg;
+    }
+
     public function exemptEntityFromStackingByName(string $entityName): void
     {
         $this->exemptedEntities[] = $entityName;
     }
-
 }

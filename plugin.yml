@@ -1,14 +1,15 @@
 ---
 name: BurgerSpawners
 main: Heisenburger69\BurgerSpawners\Main
-version: 0.1.7
-api: 3.21.0
-mcpe-protocol: [475]
-author: Heisenburger69
-website: https://github.com/Heisenburger69
-description: Plugin implementing a Stackable Spawner System for PMMP
+version: 1.0.1
+api: 4.0.0
+authors: [Heisenburger69, AGTHARN]
+description: Plugin implementing Every Mob and a Stackable Spawner System for PMMP4 <3
 
 permissions:
+  burgerspawners.command.spawner:
+    default: op
+    description: Allows a user to use Spawner command
   burgerspawners.silktouch:
     default: op
     description: Allows a user to use SilkTouch on Spawners

@@ -2,53 +2,84 @@
 
 namespace Heisenburger69\BurgerSpawners\entities;
 
-use pocketmine\entity\{Animal, Entity};
-use pocketmine\item\Item;
-use pocketmine\Player;
-use pocketmine\item\enchantment\Enchantment;
+use pocketmine\player\Player;
+use pocketmine\item\VanillaItems;
+use pocketmine\entity\EntitySizeInfo;
+use pocketmine\data\bedrock\EnchantmentIds;
+use pocketmine\data\bedrock\EnchantmentIdMap;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
-use function mt_rand;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Llama extends Animal
+class Llama extends SpawnerEntity
 {
-    public const NETWORK_ID = self::LLAMA;
+    public const CREAMY = 0;
+    public const WHITE = 1;
+    public const BROWN = 2;
+    public const GRAY = 3;
 
-    const WHITE = 1;
-
-    public $width = 0.9;
-    public $height = 1.87;
+    public const TAG_VARIANT = "Variant";
 
     public function getName(): string
     {
         return "Llama";
     }
 
-    public function initEntity(): void
+    public function initEntity(CompoundTag $nbt): void
     {
-        $this->setMaxHealth(30);
-        $this->getDataPropertyManager()->setInt(Entity::DATA_VARIANT, rand(0, 3));
-        parent::initEntity();
+        $this->setMaxHealth(15);
+        if ($this->getNamedTag()->getTag(self::TAG_VARIANT) == null) {
+            $this->getNamedTag()->setInt(self::TAG_VARIANT, self::CREAMY);
+        }
+        parent::initEntity($nbt);
+    }
+
+    public function getRandomVariant(): int
+    {
+        $arr = [self::CREAMY, self::WHITE, self::BROWN, self::GRAY];
+
+        return $arr[array_rand($arr)];
+    }
+
+    public function getLlamaVariant(): int
+    {
+        return $this->getNamedTag()->getInt(self::TAG_VARIANT);
+    }
+
+    public function setLlamaVariant(int $type): void
+    {
+        $this->getNamedTag()->setInt(self::TAG_VARIANT, $type);
     }
 
     public function getDrops(): array
     {
         $lootingL = 1;
         $cause = $this->lastDamageCause;
-        if($cause instanceof EntityDamageByEntityEvent){
+        if ($cause instanceof EntityDamageByEntityEvent) {
             $dmg = $cause->getDamager();
-            if($dmg instanceof Player){
-              
-                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(Enchantment::LOOTING);
-                if($looting !== null){
+            if ($dmg instanceof Player) {
+
+                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(EnchantmentIdMap::getInstance()->fromId(EnchantmentIds::LOOTING));
+                if ($looting !== null) {
                     $lootingL = $looting->getLevel();
-                }else{
+                } else {
                     $lootingL = 1;
-            }
+                }
             }
         }
         return [
-            Item::get(Item::LEATHER, 0, mt_rand(0, 2 * $lootingL)),
+            VanillaItems::LEATHER()->setCount(mt_rand(0, 2 * $lootingL)),
         ];
+    }
+
+    protected function getInitialSizeInfo(): EntitySizeInfo
+    {
+        return new EntitySizeInfo(1.87, 0.9);
+    }
+
+    public static function getNetworkTypeId(): string
+    {
+        return EntityIds::LLAMA;
     }
 
     public function getXpDropAmount(): int

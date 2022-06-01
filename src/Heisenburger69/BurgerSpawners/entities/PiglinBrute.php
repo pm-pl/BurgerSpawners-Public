@@ -4,33 +4,32 @@ namespace Heisenburger69\BurgerSpawners\entities;
 
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\EntitySizeInfo;
-use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Husk extends SpawnerEntity
+class PiglinBrute extends SpawnerEntity
 {
     public function getName(): string
     {
-        return "Husk";
+        return "Piglin Brute";
     }
 
-    public function initEntity(CompoundTag $nbt): void
+    public function initEntity(CompoundTag  $nbt): void
     {
-        $this->setMaxHealth(20);
+        $this->setMaxHealth(50);
         parent::initEntity($nbt);
     }
 
     public function getInitialSizeInfo(): EntitySizeInfo
     {
-        return new EntitySizeInfo(2.01875, 0.6375);
+        return new EntitySizeInfo(1.9, 0.6);
     }
 
     public static function getNetworkTypeId(): string
     {
-        return EntityIds::HUSK;
+        return "minecraft:piglin_brute";
     }
 
     public function getXpDropAmount(): int
     {
-        return 5 + mt_rand(1, 3);
+        return 20;
     }
 }

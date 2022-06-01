@@ -1,24 +1,18 @@
 <?php
 
-
 namespace Heisenburger69\BurgerSpawners\entities;
 
-use pocketmine\entity\Monster;
-use pocketmine\item\Item;
-use pocketmine\Player;
-use pocketmine\item\enchantment\Enchantment;
+use pocketmine\player\Player;
+use pocketmine\item\VanillaItems;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntitySizeInfo;
+use pocketmine\data\bedrock\EnchantmentIds;
+use pocketmine\data\bedrock\EnchantmentIdMap;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
-use function mt_rand;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Creeper extends Monster
+class Creeper extends SpawnerEntity
 {
-
-    public const NETWORK_ID = self::CREEPER;
-
-    public $height = 1.7;
-    public $width = 0.6;
-
-
     public function getName(): string
     {
         return "Creeper";
@@ -28,28 +22,37 @@ class Creeper extends Monster
     {
         $lootingL = 1;
         $cause = $this->lastDamageCause;
-        if($cause instanceof EntityDamageByEntityEvent){
+        if ($cause instanceof EntityDamageByEntityEvent) {
             $dmg = $cause->getDamager();
-            if($dmg instanceof Player){
-              
-                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(Enchantment::LOOTING);
-                if($looting !== null){
+            if ($dmg instanceof Player) {
+
+                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(EnchantmentIdMap::getInstance()->fromId(EnchantmentIds::LOOTING));
+                if ($looting !== null) {
                     $lootingL = $looting->getLevel();
-                }else{
+                } else {
                     $lootingL = 1;
-            }
+                }
             }
         }
         if (mt_rand(1, 10) < 3) {
-            return [Item::get(Item::GUNPOWDER, 0, 1 * $lootingL)];
+            return [VanillaItems::GUNPOWDER()->setCount(1 * $lootingL)];
         }
 
         return [];
+    }
+
+    protected function getInitialSizeInfo(): EntitySizeInfo
+    {
+        return new EntitySizeInfo(1.7, 0.6);
+    }
+
+    public static function getNetworkTypeId(): string
+    {
+        return EntityIds::CREEPER;
     }
 
     public function getXpDropAmount(): int
     {
         return 5 + mt_rand(1, 3);
     }
-
 }

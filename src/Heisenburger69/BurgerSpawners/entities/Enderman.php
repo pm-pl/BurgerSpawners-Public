@@ -2,44 +2,57 @@
 
 namespace Heisenburger69\BurgerSpawners\entities;
 
-use pocketmine\entity\Monster;
-use pocketmine\item\Item;
-use pocketmine\Player;
-use pocketmine\item\enchantment\Enchantment;
+use pocketmine\player\Player;
+use pocketmine\item\VanillaItems;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntitySizeInfo;
+use pocketmine\data\bedrock\EnchantmentIds;
+use pocketmine\data\bedrock\EnchantmentIdMap;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
-use function mt_rand;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Enderman extends Monster {
-
-    public const NETWORK_ID = self::ENDERMAN;
-
-    public $width = 0.3;
-    /** @var float */
-    public $length = 0.9;
-    public $height = 1.8;
-
-    public function getName(): string{
+class Enderman extends SpawnerEntity
+{
+    public function getName(): string
+    {
         return "Enderman";
     }
 
-    public function getDrops(): array{
+    public function initEntity(CompoundTag $nbt): void
+    {
+        $this->setMaxHealth(40);
+        parent::initEntity($nbt);
+    }
+
+    public function getDrops(): array
+    {
         $lootingL = 1;
         $cause = $this->lastDamageCause;
-        if($cause instanceof EntityDamageByEntityEvent){
+        if ($cause instanceof EntityDamageByEntityEvent) {
             $dmg = $cause->getDamager();
-            if($dmg instanceof Player){
-               
-                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(Enchantment::LOOTING);
-                if($looting !== null){
+            if ($dmg instanceof Player) {
+
+                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(EnchantmentIdMap::getInstance()->fromId(EnchantmentIds::LOOTING));
+                if ($looting !== null) {
                     $lootingL = $looting->getLevel();
-                }else{
+                } else {
                     $lootingL = 1;
-            }
+                }
             }
         }
         return [
-            Item::get(Item::ENDER_PEARL, 0, mt_rand(0, 1 * $lootingL)),
+            VanillaItems::ENDER_PEARL()->setCount(mt_rand(0, 1 * $lootingL)),
         ];
+    }
+
+    public function getInitialSizeInfo(): EntitySizeInfo
+    {
+        return new EntitySizeInfo(1.8, 0.3);
+    }
+
+    public static function getNetworkTypeId(): string
+    {
+        return EntityIds::ENDERMAN;
     }
 
     public function getXpDropAmount(): int

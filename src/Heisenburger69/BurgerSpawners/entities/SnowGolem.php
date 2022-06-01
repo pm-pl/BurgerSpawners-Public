@@ -2,52 +2,55 @@
 
 namespace Heisenburger69\BurgerSpawners\entities;
 
-use pocketmine\block\Block;
-use pocketmine\block\SnowLayer;
-use pocketmine\entity\Monster;
-use pocketmine\event\entity\EntityDamageEvent;
-use pocketmine\item\Item;
-use pocketmine\item\Shears;
-use pocketmine\math\Vector3;
-use pocketmine\nbt\tag\ByteTag;
-use pocketmine\Player;
-use pocketmine\item\enchantment\Enchantment;
+use pocketmine\player\Player;
+use pocketmine\item\VanillaItems;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntitySizeInfo;
+use pocketmine\data\bedrock\EnchantmentIds;
+use pocketmine\data\bedrock\EnchantmentIdMap;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class SnowGolem extends Monster {
-
-    public const NETWORK_ID = self::SNOW_GOLEM;
-    public const TAG_PUMPKIN = "Pumpkin";
-
-    public $width = 0.7;
-    public $height = 1.9;
-  
-
-    public function getName(): string{
+class SnowGolem extends SpawnerEntity
+{
+    public function getName(): string
+    {
         return "Snow Golem";
     }
 
-    public function initEntity(): void{
+    public function initEntity(CompoundTag $tag): void
+    {
         $this->setMaxHealth(4);
         $this->setHealth(4);
-        parent::initEntity();
+        parent::initEntity($tag);
     }
 
-    public function getDrops(): array{
+    public function getDrops(): array
+    {
         $lootingL = 1;
         $cause = $this->lastDamageCause;
-        if($cause instanceof EntityDamageByEntityEvent){
+        if ($cause instanceof EntityDamageByEntityEvent) {
             $dmg = $cause->getDamager();
-            if($dmg instanceof Player){
-              
-                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(Enchantment::LOOTING);
-                if($looting !== null){
+            if ($dmg instanceof Player) {
+
+                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(EnchantmentIdMap::getInstance()->fromId(EnchantmentIds::LOOTING));
+                if ($looting !== null) {
                     $lootingL = $looting->getLevel();
-                }else{
+                } else {
                     $lootingL = 1;
-            }
+                }
             }
         }
-        return [Item::get(Item::SNOWBALL, 0, mt_rand(0, 15 * $lootingL))];
+        return [VanillaItems::SNOWBALL()->setCount(mt_rand(0, 15 * $lootingL))];
+    }
+
+    protected function getInitialSizeInfo(): EntitySizeInfo
+    {
+        return new EntitySizeInfo(1.9, 0.7);
+    }
+
+    public static function getNetworkTypeId(): string
+    {
+        return EntityIds::SNOW_GOLEM;
     }
 }

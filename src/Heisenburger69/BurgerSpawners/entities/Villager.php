@@ -5,11 +5,11 @@ namespace Heisenburger69\BurgerSpawners\entities;
 use pocketmine\entity\EntitySizeInfo;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Stray extends Skeleton
+class Villager extends SpawnerEntity
 {
     public function getName(): string
     {
-        return "Stray";
+        return "Villager";
     }
 
     protected function getInitialSizeInfo(): EntitySizeInfo
@@ -19,11 +19,6 @@ class Stray extends Skeleton
 
     public static function getNetworkTypeId(): string
     {
-        return EntityIds::STRAY;
-    }
-
-    public function getXpDropAmount(): int
-    {
-        return 5 + mt_rand(1, 3);
+        return EntityIds::VILLAGER;
     }
 }

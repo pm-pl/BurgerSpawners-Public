@@ -2,41 +2,57 @@
 
 namespace Heisenburger69\BurgerSpawners\entities;
 
-use pocketmine\entity\Animal;
+use pocketmine\player\Player;
+use pocketmine\item\VanillaItems;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntitySizeInfo;
+use pocketmine\data\bedrock\EnchantmentIds;
+use pocketmine\data\bedrock\EnchantmentIdMap;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
-use pocketmine\item\enchantment\Enchantment;
-use pocketmine\item\Item;
-use pocketmine\Player;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Mooshroom extends Animal {
-
-    public const NETWORK_ID = self::MOOSHROOM;
-
-    public $width = 0.9;
-    public $height = 1.4;
-
-    public function getName(): string{
+class Mooshroom extends SpawnerEntity
+{
+    public function getName(): string
+    {
         return "Mooshroom";
     }
 
-    public function getDrops(): array{
+    public function initEntity(CompoundTag $nbt): void
+    {
+        $this->setMaxHealth(10);
+        parent::initEntity($nbt);
+    }
+
+    public function getDrops(): array
+    {
         $lootingL = 1;
         $cause = $this->lastDamageCause;
-        if($cause instanceof EntityDamageByEntityEvent){
+        if ($cause instanceof EntityDamageByEntityEvent) {
             $dmg = $cause->getDamager();
-            if($dmg instanceof Player){
-           
-                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(Enchantment::LOOTING);
-                if($looting !== null){
+            if ($dmg instanceof Player) {
+
+                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(EnchantmentIdMap::getInstance()->fromId(EnchantmentIds::LOOTING));
+                if ($looting !== null) {
                     $lootingL = $looting->getLevel();
-                }else{
+                } else {
                     $lootingL = 1;
-            }
+                }
             }
         }
         return [
-            Item::get(Item::RAW_BEEF, 0, mt_rand(1, 3 * $lootingL)),
-            Item::get(Item::LEATHER, 0, mt_rand(0, 2 * $lootingL)),
+            VanillaItems::RAW_BEEF()->setCount(mt_rand(1, 3 * $lootingL)),
+            VanillaItems::LEATHER()->setCount(mt_rand(0, 2 * $lootingL))
         ];
+    }
+
+    protected function getInitialSizeInfo(): EntitySizeInfo
+    {
+        return new EntitySizeInfo(1.4, 0.9);
+    }
+
+    public static function getNetworkTypeId(): string
+    {
+        return EntityIds::MOOSHROOM;
     }
 }

@@ -6,31 +6,31 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\EntitySizeInfo;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Witch extends SpawnerEntity
+class Pillager extends SpawnerEntity
 {
     public function getName(): string
     {
-        return "Witch";
+        return "Pillager";
     }
 
     public function initEntity(CompoundTag $nbt): void
     {
-        $this->setMaxHealth(26);
+        $this->setMaxHealth(24);
         parent::initEntity($nbt);
     }
 
-    protected function getInitialSizeInfo(): EntitySizeInfo
+    public function getInitialSizeInfo(): EntitySizeInfo
     {
-        return new EntitySizeInfo(1.95, 0.6);
+        return new EntitySizeInfo(1.0, 0.6);
     }
 
     public static function getNetworkTypeId(): string
     {
-        return EntityIds::WITCH;
+        return EntityIds::PILLAGER;
     }
 
     public function getXpDropAmount(): int
     {
-        return 5 + mt_rand(1, 3);
+        return 5;
     }
 }

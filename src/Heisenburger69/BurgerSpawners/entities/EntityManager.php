@@ -4,56 +4,72 @@ declare(strict_types=1);
 
 namespace Heisenburger69\BurgerSpawners\entities;
 
+use Exception;
+use ReflectionException;
+use pocketmine\world\World;
+use pocketmine\item\ItemIds;
+use ReflectionClassConstant;
 use pocketmine\entity\Entity;
+use pocketmine\item\ItemFactory;
+use pocketmine\utils\TextFormat;
+use pocketmine\item\ItemIdentifier;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntityFactory;
+use Heisenburger69\BurgerSpawners\Main;
+use pocketmine\entity\EntityDataHelper;
+use pocketmine\data\bedrock\EntityLegacyIds;
+use Heisenburger69\BurgerSpawners\utils\Utils;
+use Heisenburger69\BurgerSpawners\items\SpawnEgg;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class EntityManager extends Entity //Teaspoon <3
+class EntityManager
 {
     public static function init(): void
     {
-        self::registerEntity(Bat::class, true, ['Bat', 'minecraft:bat']);
-        self::registerEntity(Bee::class, true, ['Bee', 'minecraft:bee']);
-        self::registerEntity(Blaze::class, true, ['Blaze', 'minecraft:blaze']);
-        self::registerEntity(CaveSpider::class, true, ['CaveSpider', 'minecraft:cavespider']);
-        self::registerEntity(Chicken::class, true, ['Chicken', 'minecraft:chicken']);
-        self::registerEntity(Cow::class, true, ['Cow', 'minecraft:cow']);
-        self::registerEntity(Creeper::class, true, ['Creeper', 'minecraft:creeper']);
-        self::registerEntity(Donkey::class, true, ['Donkey', 'minecraft:donkey']);
-        self::registerEntity(ElderGuardian::class, true, ['ElderGuardian', 'minecraft:elderguardian']);
-        self::registerEntity(Enderman::class, true, ['Enderman', 'minecraft:enderman']);
-        self::registerEntity(Endermite::class, true, ['Endermite', 'minecraft:endermite']);
-        self::registerEntity(Evoker::class, true, ['Evoker', 'minecraft:evoker']);
-        self::registerEntity(Fox::class, true, ['Fox', 'minecraft:fox']);
-        self::registerEntity(Ghast::class, true, ['Ghast', 'minecraft:ghast']);
-        self::registerEntity(Guardian::class, true, ['Guardian', 'minecraft:guardian']);
-        self::registerEntity(Horse::class, true, ['Horse', 'minecraft:horse']);
-        self::registerEntity(Husk::class, true, ['Husk', 'minecraft:husk']);
-        self::registerEntity(IronGolem::class, true, ['IronGolem', 'minecraft:irongolem']);
-        self::registerEntity(Llama::class, true, ['Llama', 'minecraft:llama']);
-        self::registerEntity(MagmaCube::class, true, ['MagmaCube', 'minecraft:magmacube']);
-        self::registerEntity(Mooshroom::class, true, ['Mooshroom', 'minecraft:mooshroom']);
-        self::registerEntity(Mule::class, true, ['Mule', 'minecraft:mule']);
-        self::registerEntity(Ocelot::class, true, ['Ocelot', 'minecraft:ocelot']);
-        self::registerEntity(Panda::class, true, ['Panda', 'minecraft:panda']);
-        self::registerEntity(Parrot::class, true, ['Parrot', 'minecraft:parrot']);
-        self::registerEntity(Pig::class, true, ['Pig', 'minecraft:pig']);
-        self::registerEntity(PigZombie::class, true, ['ZombiePigman', 'minecraft:pigzombie']);
-        self::registerEntity(PolarBear::class, true, ['PolarBear', 'minecraft:polarbear']);
-        self::registerEntity(Rabbit::class, true, ['Rabbit', 'minecraft:rabbit']);
-        self::registerEntity(Ravager::class, true, ['Ravager', 'minecraft:ravager']);
-        self::registerEntity(Sheep::class, true, ['Sheep', 'minecraft:sheep']);
-        self::registerEntity(Shulker::class, true, ['Shulker', 'minecraft:shulker']);
-        self::registerEntity(Silverfish::class, true, ['Silverfish', 'minecraft:silverfish']);
-        self::registerEntity(Skeleton::class, true, ['Skeleton', 'minecraft:skeleton']);
-        self::registerEntity(Slime::class, true, ['Slime', 'minecraft:slime']);
-        self::registerEntity(SnowGolem::class, true, ['SnowGolem', 'minecraft:snowgolem']);
-        self::registerEntity(Spider::class, true, ['Spider', 'minecraft:spider']);
-        self::registerEntity(Stray::class, true, ['Stray', 'minecraft:stray']);
-        self::registerEntity(Vex::class, true, ['Vex', 'minecraft:vex']);
-        self::registerEntity(Vindicator::class, true, ['Vindicator', 'minecraft:vindicator']);
-        self::registerEntity(Witch::class, true, ['Witch', 'minecraft:witch']);
-        self::registerEntity(WitherSkeleton::class, true, ['WitherSkeleton', 'minecraft:witherskeleton']);
-        self::registerEntity(Wolf::class, true, ['Wolf', 'minecraft:wolf']);
-        self::registerEntity(Zombie::class, true, ['Zombie', 'minecraft:zombie']);
-        self::registerEntity(ZombieVillager::class, true, ['ZombieVillager', 'minecraft:zombievillager']);
+        self::registerEntity(Bat::class, ['Bat', EntityIds::BAT]);
+        foreach (Utils::getNamesID() as $entityId => $entityName) {
+            $class = Utils::getClassFromId($entityId);
+            if ($class === null) {
+                Main::getInstance()->getLogger()->warning("Unable to register $entityName entity");
+                continue;
+            }
+
+            self::registerEntity($class, [$entityName, $entityId]);
+            self::registerSpawnEgg($entityId, $entityName);
+        }
+    }
+
+    private static function registerEntity(string $className, array $saveNames): void
+    {
+        /** @phpstan-ignore-next-line */
+        EntityFactory::getInstance()->register($className, function (World $world, CompoundTag $nbt) use ($className): Entity {
+            $entity = new $className(EntityDataHelper::parseLocation($nbt, $world), $nbt);;
+            if (!$entity instanceof Entity) {
+                throw new Exception("$className is not an instance of Entity");
+            }
+            return $entity;
+        }, $saveNames);
+        Main::getInstance()->getLogger()->debug("Registered $className entity");
+    }
+
+    public static function registerSpawnEgg(string $entityId, string $entityName): bool
+    {
+        $name = str_replace(" ", "_", $entityName);
+
+        try {
+            $reflectionConstant = new ReflectionClassConstant(EntityLegacyIds::class, strtoupper($name));
+            $meta = $reflectionConstant->getValue();
+        } catch (ReflectionException $ex) {
+            return false;
+        }
+
+        $eggName = Utils::getEntityNameFromID($entityId) . " Spawn Egg";
+        $egg = new SpawnEgg(new ItemIdentifier(ItemIds::SPAWN_EGG, $meta), $eggName);
+        
+        $egg->setEntityId($entityId);
+        $egg->setCustomName(TextFormat::RESET . $eggName);
+
+        ItemFactory::getInstance()->register($egg, true);
+        return true;
     }
 }

@@ -2,31 +2,26 @@
 
 namespace Heisenburger69\BurgerSpawners\entities;
 
-use pocketmine\entity\Monster;
+use pocketmine\player\Player;
+use pocketmine\item\VanillaItems;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntitySizeInfo;
+use pocketmine\data\bedrock\EnchantmentIds;
+use pocketmine\data\bedrock\EnchantmentIdMap;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
-use pocketmine\item\enchantment\Enchantment;
-use pocketmine\item\Item;
-use pocketmine\item\ItemFactory;
-use pocketmine\Player;
-use function mt_rand;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Zombie extends Monster
+class Zombie extends SpawnerEntity
 {
-
-    public const NETWORK_ID = self::ZOMBIE;
-
-    public $width = 0.6;
-    public $height = 1.95;
-
     public function getName(): string
     {
         return "Zombie";
     }
 
-    public function initEntity(): void
+    public function initEntity(CompoundTag  $tag): void
     {
         $this->setMaxHealth(20);
-        parent::initEntity();
+        parent::initEntity($tag);
     }
 
     public function getDrops(): array
@@ -37,7 +32,7 @@ class Zombie extends Monster
             $dmg = $cause->getDamager();
             if ($dmg instanceof Player) {
 
-                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(Enchantment::LOOTING);
+                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(EnchantmentIdMap::getInstance()->fromId(EnchantmentIds::LOOTING));
                 if ($looting !== null) {
                     $lootingL = $looting->getLevel();
                 } else {
@@ -46,24 +41,32 @@ class Zombie extends Monster
             }
         }
         $drops = [
-            ItemFactory::get(Item::ROTTEN_FLESH, 0, mt_rand(0, 2 * $lootingL))
+            VanillaItems::ROTTEN_FLESH()->setCount(mt_rand(0, 2 * $lootingL))
         ];
-
         if (mt_rand(0, 199) < 5) {
             switch (mt_rand(0, 2)) {
                 case 0:
-                    $drops[] = ItemFactory::get(Item::IRON_INGOT, 0, 1 * $lootingL);
+                    $drops[] = VanillaItems::IRON_INGOT()->setCount(1 * $lootingL);
                     break;
                 case 1:
-                    $drops[] = ItemFactory::get(Item::CARROT, 0, 1 * $lootingL);
+                    $drops[] = VanillaItems::CARROT()->setCount(1 * $lootingL);
                     break;
                 case 2:
-                    $drops[] = ItemFactory::get(Item::POTATO, 0, 1 * $lootingL);
+                    $drops[] = VanillaItems::POTATO()->setCount(1 * $lootingL);
                     break;
             }
         }
-
         return $drops;
+    }
+
+    protected function getInitialSizeInfo(): EntitySizeInfo
+    {
+        return new EntitySizeInfo(1.95, 0.6);
+    }
+
+    public static function getNetworkTypeId(): string
+    {
+        return EntityIds::ZOMBIE;
     }
 
     public function getXpDropAmount(): int

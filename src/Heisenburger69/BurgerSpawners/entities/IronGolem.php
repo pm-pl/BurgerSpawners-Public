@@ -2,51 +2,54 @@
 
 namespace Heisenburger69\BurgerSpawners\entities;
 
-use pocketmine\entity\Animal;
-use pocketmine\item\Item;
-use pocketmine\Player;
-use pocketmine\item\enchantment\Enchantment;
+use pocketmine\player\Player;
+use pocketmine\item\VanillaItems;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntitySizeInfo;
+use pocketmine\data\bedrock\EnchantmentIds;
+use pocketmine\data\bedrock\EnchantmentIdMap;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class IronGolem extends Animal
+class IronGolem extends SpawnerEntity
 {
-
-    public const NETWORK_ID = self::IRON_GOLEM;
-
-    public $width = 1.4;
-    public $height = 2.7;
-
     public function getName(): string
     {
         return "Iron Golem";
     }
 
-    public function initEntity(): void{
+    public function initEntity(CompoundTag $nbt): void
+    {
         $this->setMaxHealth(100);
-        parent::initEntity();
+        parent::initEntity($nbt);
     }
 
     public function getDrops(): array
     {
         $lootingL = 1;
         $cause = $this->lastDamageCause;
-        if($cause instanceof EntityDamageByEntityEvent){
+        if ($cause instanceof EntityDamageByEntityEvent) {
             $dmg = $cause->getDamager();
-            if($dmg instanceof Player){
-              
-                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(Enchantment::LOOTING);
-                if($looting !== null){
+            if ($dmg instanceof Player) {
+
+                $looting = $dmg->getInventory()->getItemInHand()->getEnchantment(EnchantmentIdMap::getInstance()->fromId(EnchantmentIds::LOOTING));
+                if ($looting !== null) {
                     $lootingL = $looting->getLevel();
-                }else{
+                } else {
                     $lootingL = 1;
-            }
+                }
             }
         }
-        $iron = Item::get(Item::IRON_INGOT, 0, mt_rand(1, 2 * $lootingL));
-        $rose = Item::get(Item::RED_FLOWER, 0, 1 * $lootingL);
-        if(mt_rand(0, 5) === 0) {
-            return [$iron, $rose];
-        }
-        return [$iron];
+        return [VanillaItems::IRON_INGOT()->setCount(mt_rand(1, 2 * $lootingL))];
+    }
+
+    protected function getInitialSizeInfo(): EntitySizeInfo
+    {
+        return new EntitySizeInfo(2.7, 1.4);
+    }
+
+    public static function getNetworkTypeId(): string
+    {
+        return EntityIds::IRON_GOLEM;
     }
 }

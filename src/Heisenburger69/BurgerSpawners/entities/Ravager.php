@@ -2,47 +2,38 @@
 
 namespace Heisenburger69\BurgerSpawners\entities;
 
-use Heisenburger69\BurgerSpawners\pocketmine\AddActorPacket;
-use pocketmine\entity\Living;
-use pocketmine\item\Item;
-use pocketmine\Player;
+use pocketmine\item\ItemFactory;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntitySizeInfo;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Ravager extends Living
+class Ravager extends SpawnerEntity
 {
-    public const NETWORK_ID = 59;
-
-    public $width = 1.975;
-    public $height = 2.2;
-
     public function getName(): string
     {
         return "Ravager";
     }
 
-    /**
-     * @param Player $player
-     */
-    protected function sendSpawnPacket(Player $player): void
+    public function initEntity(CompoundTag $nbt): void
     {
-        $pk = new AddActorPacket();
-        $pk->entityRuntimeId = $this->getId();
-        $pk->type = "minecraft:ravager";
-        $pk->position = $this->asVector3();
-        $pk->motion = $this->getMotion();
-        $pk->yaw = $this->yaw;
-        $pk->headYaw = $this->yaw;
-        $pk->pitch = $this->pitch;
-        $pk->attributes = $this->attributeMap->getAll();
-        $pk->metadata = $this->propertyManager->getAll();
-
-        $player->dataPacket($pk);
+        $this->setMaxHealth(100);
+        parent::initEntity($nbt);
     }
 
     public function getDrops(): array
     {
         //Ravager drops aren't affected by Looting
-        $drops = [Item::get(Item::SADDLE, 0, 1)];
-        return $drops;
+        return [ItemFactory::getInstance()->get(329)];
+    }
+
+    protected function getInitialSizeInfo(): EntitySizeInfo
+    {
+        return new EntitySizeInfo(1.9, 1.2);
+    }
+
+    public static function getNetworkTypeId(): string
+    {
+        return EntityIds::RAVAGER;
     }
 
     public function getXpDropAmount(): int

@@ -4,25 +4,17 @@ namespace Heisenburger69\BurgerSpawners\entities;
 
 use pocketmine\player\Player;
 use pocketmine\item\VanillaItems;
-use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\EntitySizeInfo;
 use pocketmine\data\bedrock\EnchantmentIds;
 use pocketmine\data\bedrock\EnchantmentIdMap;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Shulker extends SpawnerEntity
+class ZombifiedPiglin extends SpawnerEntity
 {
     public function getName(): string
     {
-        return "Shulker";
-    }
-
-    public function initEntity(CompoundTag $nbt): void
-    {
-        $this->setMaxHealth(30);
-        $this->getNetworkProperties()->setInt(2, mt_rand(0, 15));
-        parent::initEntity($nbt);
+        return "Zombified Piglin";
     }
 
     public function getDrops(): array
@@ -41,17 +33,25 @@ class Shulker extends SpawnerEntity
                 }
             }
         }
-        return [VanillaItems::SHULKER_SHELL()->setCount(mt_rand(0, 1 * $lootingL))];
+        $drops = [
+            VanillaItems::GOLD_NUGGET()->setCount(mt_rand(0, 1 * $lootingL)),
+            VanillaItems::ROTTEN_FLESH()->setCount(mt_rand(0, 1 * $lootingL)),
+        ];
+
+        if (mt_rand(1, 200) <= 7) {
+            $drops[] = VanillaItems::GOLD_NUGGET()->setCount(1 * $lootingL);
+        }
+        return $drops;
     }
 
     protected function getInitialSizeInfo(): EntitySizeInfo
     {
-        return new EntitySizeInfo(1, 1);
+        return new EntitySizeInfo(1.95, 0.6);
     }
 
     public static function getNetworkTypeId(): string
     {
-        return EntityIds::SHULKER;
+        return EntityIds::ZOMBIE_PIGMAN;
     }
 
     public function getXpDropAmount(): int

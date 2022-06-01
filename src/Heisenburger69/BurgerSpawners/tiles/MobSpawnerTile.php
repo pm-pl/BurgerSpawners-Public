@@ -2,298 +2,231 @@
 
 namespace Heisenburger69\BurgerSpawners\tiles;
 
-use Heisenburger69\BurgerSpawners\utils\ConfigManager;
+use ReflectionException;
+use pocketmine\item\Item;
+use pocketmine\world\World;
+use pocketmine\entity\Human;
+use pocketmine\math\Vector3;
+use ReflectionClassConstant;
+use pocketmine\player\Player;
+use pocketmine\entity\Location;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\block\BlockLegacyIds;
+use pocketmine\block\tile\Spawnable;
 use Heisenburger69\BurgerSpawners\utils\Forms;
 use Heisenburger69\BurgerSpawners\utils\Utils;
-use pocketmine\entity\Entity;
-use pocketmine\entity\Human;
-use pocketmine\item\Item;
-use pocketmine\level\Level;
-use pocketmine\math\Vector3;
-use pocketmine\nbt\tag\CompoundTag;
-use pocketmine\nbt\tag\IntTag;
-use pocketmine\nbt\tag\StringTag;
-use pocketmine\Player;
-use pocketmine\tile\Spawnable;
-
-//Basic code structure from SimpleSpawners by XenialDan, ty <3
+use Heisenburger69\BurgerSpawners\utils\ConfigManager;
+use Heisenburger69\BurgerSpawners\utils\EntityLegacyIds;
+use Heisenburger69\BurgerSpawners\entities\SpawnerEntity;
 
 class MobSpawnerTile extends Spawnable
 {
+    public const TILE_ID = "MobSpawner";
+    public const TILE_BLOCK = BlockLegacyIds::MOB_SPAWNER;
 
-    /** @var string */
-    public const LOAD_RANGE = "LoadRange";//Distance for player beyond which no mobs are spawned
-    /** @var string */
-    public const ENTITY_ID = "EntityID";//ID of the Entity
-    /** @var string */
-    public const SPAWN_RANGE = "SpawnRange";//Radius around the spawner in which the mob might spawn
-    /** @var string */
-    public const BASE_DELAY = "BaseDelay";//Delay in ticks between spawning of mobs
-    /** @var string */
-    public const DELAY = "Delay";//Current Delay in ticks before the next mob is spawned
-    /** @var string */
-    public const COUNT = "Count";//Number of spawners stacked
+    public const REAL_ENTITY_ID = "EntityId"; //ID of the Entity
+    public const ENTITY_ID = "ENTITY_ID";
+    public const ENTITY_IDENTIFIER = "EntityIdentifier";
+    public const DISPLAY_ENTITY_SCALE = "DisplayEntityScale";
 
-    /** @var CompoundTag */
-    private $nbt;
+    public const SPAWN_COUNT = "SpawnCount"; //Number of spawners stacked
+    public const SPAWN_RANGE = "SpawnRange"; //Radius around the spawner in which the mob might spawn
 
-    /**
-     * MobSpawnerTile constructor.
-     * @param Level $level
-     * @param CompoundTag $nbt
-     */
-    public function __construct(Level $level, CompoundTag $nbt)
+    public const MIN_SPAWN_DELAY = "MinSpawnDelay";
+    public const MAX_SPAWN_DELAY = "MaxSpawnDelay";
+
+    public int $realEntityId = 0;
+    public string $entityId = "";
+    public string $entityIdentifier = "";
+    public float $displayEntityScale = 1.0;
+
+    public int $spawnCount = 1;
+    public int $spawnRange = 4;
+
+    public int $minDelay = 5;
+    public int $delay = 5;
+
+    public function __construct(World $level, Vector3 $pos)
     {
         $range = (int)ConfigManager::getValue("spawn-range");
-        if($range === 0) { //Patch for outdated configs without "spawn-range" entry
+        if ($range === 0) { //Patch for outdated configs without "spawn-range" entry
             $range = 8;
         }
-        if (!$nbt->hasTag(self::LOAD_RANGE, IntTag::class)) {
-            $nbt->setInt(self::LOAD_RANGE, $range, true);
-        }
-        if (!$nbt->hasTag(self::ENTITY_ID, IntTag::class)) {
-            $nbt->setInt(self::ENTITY_ID, 0, true);
-        }
-    
-        if (!$nbt->hasTag(self::SPAWN_RANGE, IntTag::class)) {
-            $nbt->setInt(self::SPAWN_RANGE, 4, true); //todo configure?
-        }
-        $base = (int)ConfigManager::getValue("base-spawn-rate");
-        $base = $base * 20;
-        if (!$nbt->hasTag(self::BASE_DELAY, IntTag::class)) {
-            $nbt->setInt(self::BASE_DELAY, $base, true);
-        }
-        if (!$nbt->hasTag(self::DELAY, IntTag::class)) {
-            $nbt->setInt(self::DELAY, $base, true);
-        }
-        if (!$nbt->hasTag(self::COUNT, IntTag::class)) {
-            $nbt->setInt(self::COUNT, 1, true);
+        if (!isset($this->spawnRange)) {
+            $this->spawnRange = $range;
         }
 
-        parent::__construct($level, $nbt);
-        if ($this->getEntityId() > 0) {
-            $this->scheduleUpdate();
+        $base = (int)ConfigManager::getValue("base-spawn-rate");
+        $base = $base * 20;
+        if (!isset($this->minDelay)) {
+            $this->minDelay = $base;
+        }
+        if (!isset($this->delay)) {
+            $this->delay = $base;
+        }
+
+        parent::__construct($level, $pos);
+        if ($this->entityId > 0) {
+            $this->onUpdate();
         }
     }
 
-    /**
-     * @return bool
-     */
+    public function copyDataFromItem(Item $item): void
+    {
+        $this->readSaveData($item->getNamedTag());
+
+        parent::copyDataFromItem($item);
+    }
+
     public function onUpdate(): bool
     {
-        if ($this->closed === true) {
-            return false;
-        }
-        $this->timings->startTiming();
-        if ($this->canUpdate()) {
-            if ($this->getDelay() <= 0) {
-                $success = 0;
-                for ($i = 0; $i < 16; $i++) {
-                    if ($success > 0) {
-                        $this->setDelay($this->getBaseDelay());
-                        return true;
-                    }
-                    $pos = $this->add(mt_rand() / mt_getrandmax() * $this->getSpawnRange(), mt_rand(-1, 1), mt_rand() / mt_getrandmax() * $this->getSpawnRange());
-                    $target = $this->getLevel()->getBlock($pos);
-                    if ($target->getId() == Item::AIR) {
-                        $success++;
-                        $entity = Entity::createEntity($this->getEntityId(), $this->getLevel(), Entity::createBaseNBT($target->add(0.5, 0, 0.5), null, lcg_value() * 360, 0));
-                        if ($entity instanceof Entity) {
-                            $entity->spawnToAll();
-                        }
-                    }
-                }
+        $this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 1);
+
+        if (!$this->canUpdate())
+            return true;
+
+        if ($this->delay-- < 0) {
+            $success = 0;
+            for ($i = 0; $i < 16; $i++) {
                 if ($success > 0) {
-                    $this->setDelay($this->getBaseDelay());
+                    $this->delay = $this->getBaseDelay();
+                    return true;
                 }
-            } else {
-                $this->setDelay($this->getDelay() - 1);
+                $pos = $this->getPosition()->add(mt_rand() / mt_getrandmax() * $this->spawnRange, mt_rand(-1, 1), mt_rand() / mt_getrandmax() * $this->spawnRange);
+                $target = $this->getPosition()->getWorld()->getBlock($pos);
+                if ($target->getId() == BlockLegacyIds::AIR) {
+                    $success++;
+                    $entity = Utils::getEntityFromId($this->entityId, new Location($pos->getX(), $pos->getY(), $pos->getZ(), $this->getPosition()->getWorld(), 0, 0));
+                    if ($entity instanceof SpawnerEntity) {
+                        $entity->spawnToAll();
+                    }
+                }
+            }
+            if ($success > 0) {
+                $this->delay = $this->getBaseDelay();
             }
         }
-        $this->timings->stopTiming();
         return true;
     }
 
-    /**
-     * @return bool
-     */
     public function canUpdate(): bool
     {
-        if (!$this->getLevel()->isChunkLoaded($this->getX() >> 4, $this->getZ() >> 4)) {
+        if (!$this->getPosition()->getWorld()->isChunkLoaded($this->getPosition()->getX() >> 4, $this->getPosition()->getZ() >> 4))
             return false;
-        }
-        if ($this->getEntityId() === 0) {
+        if ($this->spawnRange == '')
             return false;
-        }
-        
-        if ($this->getLevel()->getNearestEntity($this, 25, Human::class) instanceof Player) {
+        if (!$this->getPosition()->getWorld()->getTile($this->getPosition()) instanceof self)
+            return false;
+        if ($this->getPosition()->getWorld()->getNearestEntity($this->getPosition(), 25, Human::class) instanceof Player)
             return true;
-        }
+
         return false;
     }
 
-    /**
-     * @return int
-     */
-    public function getDelay(): int
+    public function getName(): string
     {
-        return $this->getNBT()->getInt(self::DELAY);
+        return Utils::getEntityNameFromID($this->entityId) . " Spawner";
     }
 
-    /**
-     * @param int $value
-     */
-    public function setDelay(int $value): void
-    {
-        $this->getNBT()->setInt(self::DELAY, $value, true);
-    }
-
-    /**
-     * @return int
-     */
     public function getBaseDelay(): int
     {
-        $count = $this->getCount();
-        $baseDelay = 800 / $count;
-        $this->setBaseDelay($baseDelay);
+        $baseDelay = 300 / $this->spawnCount;
+        $this->setMinDelay($baseDelay);
+
         return $baseDelay;
     }
 
-    /**
-     * @param int $value
-     */
-    public function setBaseDelay(int $value): void
+    public function setEntityId(string $id, ?string $realEntityId = null): void
     {
-        $this->getNBT()->setInt(self::BASE_DELAY, $value, true);
+        try {
+            if ($realEntityId === null) {
+                $reflectionConstant = new ReflectionClassConstant(EntityLegacyIds::class, Utils::getEntityNameFromID($this->entityId));
+                $realEntityId = $reflectionConstant->getValue();
+            }
+            $this->realEntityId = $realEntityId;
+        } catch (ReflectionException $ex) {
+        }
+        $this->entityId = $id;
+
+        $this->setDirty();
+        $this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 1);
     }
 
-    /**
-     * @return int
-     */
-    public function getSpawnRange(): int
+    public function setEntityIdentifier(string $identifier): void
     {
-        return $this->getNBT()->getInt(self::SPAWN_RANGE);
+        $this->entityIdentifier = $identifier;
     }
 
-    /**
-     * @param int $value
-     */
-    public function setSpawnRange(int $value): void
-    {
-        $this->getNBT()->setInt(self::SPAWN_RANGE, $value, true);
-    }
-
-    /**
-     * @return int
-     */
-    public function getCount(): int
-    {
-        return $this->getNBT()->getInt(self::COUNT);
-    }
-
-    /**
-     * @param int $value
-     */
-    public function setCount(int $value): void
-    {
-        $this->getNBT()->setInt(self::COUNT, $value, true);
-    }
-
-    /**
-     * @return string
-     */
-    public function getName(): string
-    {
-        return Utils::getEntityNameFromID($this->getEntityId()) . " Spawner";
-    }
-
-    /**
-     * @return int
-     */
-    public function getLoadRange(): int
-    {
-        return $this->getNBT()->getInt(self::LOAD_RANGE);
-    }
-
-    /**
-     * @param int $range
-     */
-    public function setLoadRange(int $range): void
-    {
-        $this->getNBT()->setInt(self::LOAD_RANGE, $range, true);
-    }
-
-    /**
-     * @return int
-     */
-    public function getEntityId(): int
-    {
-        return $this->getNBT()->getInt(self::ENTITY_ID);
-    }
-
-    /**
-     * @param int $id
-     */
-    public function setEntityId(int $id): void
-    {
-        $this->getNBT()->setInt(self::ENTITY_ID, $id, true);
-        $this->onChanged();
-        $this->scheduleUpdate();
-    }
-
-    /**
-     * @param float $scale
-     */
     public function setEntityScale(float $scale): void
     {
-        $this->getNBT()->setFloat("DisplayEntityScale", $scale, true);
-        $this->onChanged();
-        $this->scheduleUpdate();
+        $this->displayEntityScale = $scale;
     }
 
-    /**
-     * @return CompoundTag
-     */
-    public function getNBT(): CompoundTag
+    public function setSpawnCount(int $value): void
     {
-        return $this->nbt;
+        $this->spawnCount = $value;
     }
 
-    /**
-     * @param CompoundTag $nbt
-     */
+    public function setSpawnRange(int $value): void
+    {
+        $this->spawnRange = $value;
+    }
+
+    public function setMinDelay(int $value): void
+    {
+        $this->minDelay = $value;
+    }
+
+    public function setDelay(int $value): void
+    {
+        $this->delay = $value;
+    }
+
+    public function writeSaveData(CompoundTag $nbt): void
+    {
+        $this->addAdditionalSpawnData($nbt);
+    }
+
     public function addAdditionalSpawnData(CompoundTag $nbt): void
     {
-        $this->baseData($nbt);
+        $nbt->setInt(self::REAL_ENTITY_ID, $this->realEntityId);
+        $nbt->setString(self::ENTITY_ID, $this->entityId);
+        $nbt->setString(self::ENTITY_IDENTIFIER, Utils::getEntityNameFromID($this->entityId));
+        $nbt->setFloat(self::DISPLAY_ENTITY_SCALE, 1.0);
+
+        $nbt->setInt(self::SPAWN_COUNT, $this->spawnCount);
+        $nbt->setInt(self::SPAWN_RANGE, $this->spawnRange);
+
+        $nbt->setInt(self::MIN_SPAWN_DELAY, $this->minDelay);
+        $nbt->setInt(self::MAX_SPAWN_DELAY, $this->delay);
     }
 
-    /**
-     * @param CompoundTag $nbt
-     */
-    private function baseData(CompoundTag $nbt): void
+    public function readSaveData(CompoundTag $nbt): void
     {
-        $nbt->setInt("EntityId", $this->getNBT()->getInt(self::ENTITY_ID), true);
-        $nbt->setInt(self::LOAD_RANGE, $this->getNBT()->getInt(self::LOAD_RANGE), true);
-        $nbt->setInt(self::ENTITY_ID, $this->getNBT()->getInt(self::ENTITY_ID), true);
-        $nbt->setInt(self::DELAY, $this->getNBT()->getInt(self::DELAY), true);
-        $nbt->setInt(self::SPAWN_RANGE, $this->getNBT()->getInt(self::SPAWN_RANGE), true);
-        $nbt->setInt(self::COUNT, $this->getNBT()->getInt(self::COUNT), true);
-    }
+        if (($entityId = $nbt->getTag(self::ENTITY_ID)) !== null) {
+            $realEntityId = ($realEntityId = $nbt->getTag(self::REAL_ENTITY_ID)) !== null ? $realEntityId->getValue() : null;
+            $this->setEntityId($entityId->getValue(), $realEntityId);
+        }
+        if (($entityIdentifier = $nbt->getTag(self::ENTITY_IDENTIFIER)) !== null) {
+            $this->setEntityIdentifier($entityIdentifier->getValue());
+        }
+        if (($displayEntityScale = $nbt->getTag(self::DISPLAY_ENTITY_SCALE)) !== null) {
+            $this->setEntityScale($displayEntityScale->getValue());
+        }
 
-    /**
-     * @param CompoundTag $nbt
-     */
-    protected function readSaveData(CompoundTag $nbt): void
-    {
-        $this->nbt = $nbt;
-    }
+        if (($spawnCount = $nbt->getTag(self::SPAWN_COUNT)) !== null) {
+            $this->setSpawnCount((int)$spawnCount->getValue());
+        }
+        if (($spawnRange = $nbt->getTag(self::SPAWN_RANGE)) !== null) {
+            $this->setSpawnRange((int)$spawnRange->getValue());
+        }
 
-    /**
-     * @param CompoundTag $nbt
-     */
-    protected function writeSaveData(CompoundTag $nbt): void
-    {
-        $this->baseData($nbt);
+        if (($minDelay = $nbt->getTag(self::MIN_SPAWN_DELAY)) !== null) {
+            $this->setMinDelay((int)$minDelay->getValue());
+        }
+        if (($delay = $nbt->getTag(self::MAX_SPAWN_DELAY)) !== null) {
+            $this->setDelay((int)$delay->getValue());
+        }
     }
 
     public function sendAddSpawnersForm(Player $player): void

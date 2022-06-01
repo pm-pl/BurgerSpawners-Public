@@ -2,15 +2,11 @@
 
 namespace Heisenburger69\BurgerSpawners\utils;
 
-use Heisenburger69\BurgerSpawners\Main;
 use pocketmine\utils\TextFormat as C;
+use Heisenburger69\BurgerSpawners\Main;
 
 class ConfigManager
 {
-    /**
-     * @param string $messageTag
-     * @return string
-     */
     public static function getMessage(string $messageTag): string
     {
         $message = (string) Main::getInstance()->getConfig()->get($messageTag);
@@ -18,20 +14,12 @@ class ConfigManager
         return $message;
     }
 
-    /**
-     * @param string $toggleTag
-     * @return bool
-     */
     public static function getToggle(string $toggleTag): bool
     {
         $toggle = (bool) Main::getInstance()->getConfig()->get($toggleTag);
         return $toggle;
     }
 
-    /**
-     * @param string $valueTag
-     * @return float
-     */
     public static function getValue(string $valueTag): float
     {
         $float = (float)Main::getInstance()->getConfig()->get($valueTag);
@@ -39,7 +27,6 @@ class ConfigManager
     }
 
     /**
-     * @param string $arrayTag
      * @return array|bool
      */
     public static function getArray(string $arrayTag)

@@ -3,7 +3,7 @@
 namespace Heisenburger69\BurgerSpawners\entities;
 
 use pocketmine\player\Player;
-use pocketmine\item\VanillaItems;
+use pocketmine\item\ItemFactory;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\EntitySizeInfo;
 use pocketmine\data\bedrock\EnchantmentIds;
@@ -11,17 +11,16 @@ use pocketmine\data\bedrock\EnchantmentIdMap;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Shulker extends SpawnerEntity
+class Dolphin extends SpawnerEntity
 {
     public function getName(): string
     {
-        return "Shulker";
+        return "Dolphin";
     }
 
     public function initEntity(CompoundTag $nbt): void
     {
-        $this->setMaxHealth(30);
-        $this->getNetworkProperties()->setInt(2, mt_rand(0, 15));
+        $this->setMaxHealth(10);
         parent::initEntity($nbt);
     }
 
@@ -41,21 +40,21 @@ class Shulker extends SpawnerEntity
                 }
             }
         }
-        return [VanillaItems::SHULKER_SHELL()->setCount(mt_rand(0, 1 * $lootingL))];
+        return [ItemFactory::getInstance()->get(264, 0, mt_rand(0, 1 * $lootingL))];
     }
 
-    protected function getInitialSizeInfo(): EntitySizeInfo
+    public function getInitialSizeInfo(): EntitySizeInfo
     {
-        return new EntitySizeInfo(1, 1);
+        return new EntitySizeInfo(0.6, 0.9);
     }
 
     public static function getNetworkTypeId(): string
     {
-        return EntityIds::SHULKER;
+        return EntityIds::DOLPHIN;
     }
 
     public function getXpDropAmount(): int
     {
-        return 5 + mt_rand(1, 3);
+        return mt_rand(1, 3);
     }
 }

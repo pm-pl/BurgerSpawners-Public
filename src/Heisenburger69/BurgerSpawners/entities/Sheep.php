@@ -2,44 +2,60 @@
 
 namespace Heisenburger69\BurgerSpawners\entities;
 
-use pocketmine\entity\Animal;
+use pocketmine\player\Player;
+use pocketmine\item\VanillaItems;
+use pocketmine\block\VanillaBlocks;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntitySizeInfo;
+use pocketmine\data\bedrock\EnchantmentIds;
+use pocketmine\data\bedrock\EnchantmentIdMap;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
-use pocketmine\item\enchantment\Enchantment;
-use pocketmine\item\Item;
-use pocketmine\Player;
-use function mt_rand;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-class Sheep extends Animal {
-
-    public const NETWORK_ID = self::SHEEP;
-
-    public $width = 0.9;
-    public $height = 1.3;
-
-    public function getName(): string{
+class Sheep extends SpawnerEntity
+{
+    public function getName(): string
+    {
         return "Sheep";
     }
 
-    public function getDrops(): array{
+    public function initEntity(CompoundTag $nbt): void
+    {
+        $this->setMaxHealth(8);
+        parent::initEntity($nbt);
+    }
+
+    public function getDrops(): array
+    {
         $lootingL = 1;
         $cause = $this->lastDamageCause;
-        if($cause instanceof EntityDamageByEntityEvent){
+        if ($cause instanceof EntityDamageByEntityEvent) {
             $damager = $cause->getDamager();
-            if($damager instanceof Player){
-           
-                $looting = $damager->getInventory()->getItemInHand()->getEnchantment(Enchantment::LOOTING);
-                if($looting !== null){
+            if ($damager instanceof Player) {
+
+                $looting = $damager->getInventory()->getItemInHand()->getEnchantment(EnchantmentIdMap::getInstance()->fromId(EnchantmentIds::LOOTING));
+                if ($looting !== null) {
                     $lootingL = $looting->getLevel();
-                }else{
+                } else {
                     $lootingL = 1;
                 }
-                }
             }
-        return [
-                Item::get(Item::WOOL, mt_rand(0, 15), 1 * $lootingL), //TODO: Check proper color
-                Item::get(Item::RAW_MUTTON, 0, mt_rand(1, 2 * $lootingL)),
-            ];
         }
+        return [
+            VanillaBlocks::WOOL()->asItem()->setCount(1 * $lootingL),
+            VanillaItems::RAW_MUTTON()->setCount(mt_rand(1, 2 * $lootingL))
+        ];
+    }
+
+    protected function getInitialSizeInfo(): EntitySizeInfo
+    {
+        return new EntitySizeInfo(1.3, 0.9);
+    }
+
+    public static function getNetworkTypeId(): string
+    {
+        return EntityIds::SHEEP;
+    }
 
     public function getXpDropAmount(): int
     {

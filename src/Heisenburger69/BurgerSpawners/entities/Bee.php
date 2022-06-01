@@ -2,38 +2,31 @@
 
 namespace Heisenburger69\BurgerSpawners\entities;
 
-use Heisenburger69\BurgerSpawners\pocketmine\AddActorPacket;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\EntitySizeInfo;
+use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
-use pocketmine\entity\Living;
-use pocketmine\Player;
-
-class Bee extends Living
+class Bee extends SpawnerEntity
 {
-
-    public const NETWORK_ID = 122;
-
-    public $width = 0.6;
-    public $height = 0.6;
-
     public function getName(): string
     {
         return "Bee";
     }
 
-    protected function sendSpawnPacket(Player $player): void
+    public function initEntity(CompoundTag $nbt): void
     {
-        $pk = new AddActorPacket();
-        $pk->entityRuntimeId = $this->getId();
-        $pk->type = "minecraft:bee";
-        $pk->position = $this->asVector3();
-        $pk->motion = $this->getMotion();
-        $pk->yaw = $this->yaw;
-        $pk->headYaw = $this->yaw; //TODO
-        $pk->pitch = $this->pitch;
-        $pk->attributes = $this->attributeMap->getAll();
-        $pk->metadata = $this->propertyManager->getAll();
+        $this->setMaxHealth(10);
+        parent::initEntity($nbt);
+    }
 
-        $player->dataPacket($pk);
+    public static function getNetworkTypeId(): string
+    {
+        return EntityIds::BLAZE;
+    }
+
+    public function getInitialSizeInfo(): EntitySizeInfo
+    {
+        return new EntitySizeInfo(0.6, 0.6);
     }
 
     public function getXpDropAmount(): int
