@@ -1,7 +1,7 @@
 ---
 name: BurgerSpawners
 main: Heisenburger69\BurgerSpawners\Main
-version: 1.0.1
+version: 1.0.2
 api: 4.0.0
 authors: [Heisenburger69, AGTHARN]
 description: Plugin implementing Every Mob and a Stackable Spawner System for PMMP4 <3
