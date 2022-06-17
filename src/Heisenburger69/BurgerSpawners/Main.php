@@ -55,9 +55,13 @@ class Main extends PluginBase
         $oldSpawner = VanillaBlocks::MONSTER_SPAWNER();
         BlockFactory::getInstance()->register(new SpawnerBlock(new BlockIdentifier($oldSpawner->getId(), 0, ItemIds::MONSTER_SPAWNER, MobSpawnerTile::class), $oldSpawner->getName(), $oldSpawner->getBreakInfo()), true);
 
-        EnchantmentIdMap::getInstance()->register(EnchantmentIds::LOOTING, new Enchantment('Looting', Rarity::COMMON, ItemFlags::SWORD, ItemFlags::NONE, 5));
-        /** @phpstan-ignore-next-line */
-        StringToEnchantmentParser::getInstance()->register('looting', fn () => EnchantmentIdMap::getInstance()->fromId(EnchantmentIds::LOOTING));
+        if (!EnchantmentIdMap::getInstance()->fromId(EnchantmentIds::LOOTING) instanceof Enchantment) {
+            EnchantmentIdMap::getInstance()->register(EnchantmentIds::LOOTING, new Enchantment('Looting', Rarity::COMMON, ItemFlags::SWORD, ItemFlags::NONE, 5));
+        }
+        if (!in_array('looting', StringToEnchantmentParser::getInstance()->getKnownAliases())) {
+            /** @phpstan-ignore-next-line */
+            StringToEnchantmentParser::getInstance()->register('looting', fn () => EnchantmentIdMap::getInstance()->fromId(EnchantmentIds::LOOTING));
+        }
 
         if (ConfigManager::getToggle("register-mobs")) {
             EntityManager::init();
@@ -123,7 +127,7 @@ class Main extends PluginBase
         if (!$egg instanceof SpawnEgg) {
             return VanillaItems::AIR();
         }
-        
+
         $egg->setEntityId($entityId);
         $egg->setCustomName(C::RESET . $eggName);
 
