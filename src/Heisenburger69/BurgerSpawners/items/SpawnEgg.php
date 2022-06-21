@@ -11,16 +11,16 @@ use pocketmine\entity\Location;
 use pocketmine\item\ItemUseResult;
 use pocketmine\item\SpawnEgg as PMSpawnEgg;
 use Heisenburger69\BurgerSpawners\utils\Utils;
-use Heisenburger69\BurgerSpawners\entities\Pig;
 use Heisenburger69\BurgerSpawners\utils\EntityIds;
+use Heisenburger69\BurgerSpawners\entities\passive\Pig;
 
 class SpawnEgg extends PMSpawnEgg
 {
-    private string $entityId = EntityIds::PIG;
+    private string $entityIdentifier = EntityIds::PIG;
 
     protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch): Entity
     {
-        return Utils::getEntityFromId($this->entityId, Location::fromObject($pos, $world, $yaw, $pitch)) ?? new Pig(Location::fromObject($pos, $world, $yaw, $pitch));
+        return Utils::getEntityFromId($this->entityIdentifier, Location::fromObject($pos, $world, $yaw, $pitch)) ?? new Pig(Location::fromObject($pos, $world, $yaw, $pitch));
     }
 
     public function onInteractBlock(Player $player, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector): ItemUseResult
@@ -38,8 +38,8 @@ class SpawnEgg extends PMSpawnEgg
         return ItemUseResult::SUCCESS();
     }
 
-    public function setEntityId(string $entityId): void
+    public function setEntityIdentifier(string $entityIdentifier): void
     {
-        $this->entityId = $entityId;
+        $this->entityIdentifier = $entityIdentifier;
     }
 }

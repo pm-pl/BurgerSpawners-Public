@@ -86,56 +86,13 @@ class Main extends PluginBase
         return self::$instance;
     }
 
-    public function getSpawner(string $name, int $amount): Item
-    {
-        $name = strtolower($name);
-        $name = str_replace(" ", "_", $name);
-        $entityID = Utils::getEntityIDFromName($name);
-        if (!is_string($entityID)) {
-            return VanillaItems::AIR();
-        }
-
-        $nbt = new CompoundTag();
-        $nbt->setString(MobSpawnerTile::ENTITY_ID, $entityID);
-
-        $spawner = VanillaBlocks::MONSTER_SPAWNER()->asItem();
-        $spawner->setCount($amount);
-        $spawner->setNamedTag($nbt);
-        $spawnerName = Utils::getEntityNameFromID($entityID) . " Spawner";
-        $spawner->setCustomName(C::RESET . $spawnerName);
-
-        return $spawner;
-    }
-
-    public function getSpawnEgg(string $name, int $amount): Item
-    {
-        $name = strtolower($name);
-        $entityId = Utils::getEntityIDFromName($name);
-        if (!is_string($entityId)) {
-            return VanillaItems::AIR();
-        }
-
-        try {
-            $reflectionConstant = new ReflectionClassConstant(EntityLegacyIds::class, strtoupper($name));
-            $meta = $reflectionConstant->getValue();
-        } catch (ReflectionException $ex) {
-            return VanillaItems::AIR();
-        }
-
-        $eggName = Utils::getEntityNameFromID($entityId) . " Spawn Egg";
-        $egg = ItemFactory::getInstance()->get(ItemIds::SPAWN_EGG, $meta, $amount);
-        if (!$egg instanceof SpawnEgg) {
-            return VanillaItems::AIR();
-        }
-
-        $egg->setEntityId($entityId);
-        $egg->setCustomName(C::RESET . $eggName);
-
-        return $egg;
-    }
-
     public function exemptEntityFromStackingByName(string $entityName): void
     {
         $this->exemptedEntities[] = $entityName;
+    }
+
+    public function getFile(): string
+    {
+        return parent::getFile();
     }
 }

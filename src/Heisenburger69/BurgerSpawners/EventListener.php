@@ -18,7 +18,7 @@ use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\entity\EntityExplodeEvent;
 use pocketmine\event\player\PlayerInteractEvent;
 use Heisenburger69\BurgerSpawners\items\SpawnEgg;
-use Heisenburger69\BurgerSpawners\utils\Mobstacker;
+use Heisenburger69\BurgerSpawners\utils\MobStacker;
 use Heisenburger69\BurgerSpawners\items\SpawnerBlock;
 use Heisenburger69\BurgerSpawners\utils\ConfigManager;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -48,7 +48,7 @@ class EventListener implements Listener
 
         if (in_array(strtolower((string) $entity->getId()), $this->plugin->exemptedEntities)) return;
 
-        $mobStacker = new Mobstacker($entity);
+        $mobStacker = new MobStacker($entity);
         if ($entity->getHealth() - $event->getFinalDamage() <= 0) {
             $cause = null;
             if ($event instanceof EntityDamageByEntityEvent) {
@@ -71,23 +71,19 @@ class EventListener implements Listener
     {
         $entity = $event->getEntity();
         $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function () use ($entity): void {
-            if (!$entity instanceof Living) return;
-            if (!in_array(str_replace(" ", "_", strtolower($entity->getName())), Utils::getEntityArrayList())) return;
+            if (!$entity instanceof SpawnerEntity) return;
             if (in_array(strtolower((string) $entity->getId()), $this->plugin->exemptedEntities)) return;
             if (in_array(Utils::getEntityNameFromID((string) $entity->getId()), $this->plugin->exemptedEntities)) return;
             if (!$entity->getPosition()->isValid()) return;
+
             $disabledWorlds = ConfigManager::getArray("mob-stacking-disabled-worlds");
-            if (is_array($disabledWorlds)) {
-                if (in_array($entity->getWorld()->getFolderName(), $disabledWorlds)) {
-                    return;
-                }
+            if (is_array($disabledWorlds) && in_array($entity->getWorld()->getFolderName(), $disabledWorlds)) {
+                return;
             }
 
             if (ConfigManager::getToggle("allow-mob-stacking")) {
-                if ($entity instanceof SpawnerEntity) {
-                    $mobStacker = new Mobstacker($entity);
-                    $mobStacker->stack();
-                }
+                $mobStacker = new MobStacker($entity);
+                $mobStacker->stack();
             }
         }), 1);
     }

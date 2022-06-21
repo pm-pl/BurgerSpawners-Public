@@ -6,6 +6,31 @@ namespace Heisenburger69\BurgerSpawners\utils;
 
 final class EntityLegacyIds
 {
+    // PURPOSE OF THIS IS TO IMPLEMENT THE LEGACY ENTITY IDS WITHOUT HAVING TO WAIT FOR POCKETMINE-MP TO HAVE THIS UPDATED
+    public const ALLAY = 134;
+    public const AXOLOTL = 130;
+    public const BEE = 122;
+    public const CHEST_BOAT = 218; // not a spawner mob
+    public const FOX = 121;
+    public const FROG = 132;
+    public const GLOW_SQUID = 129;
+    public const GOAT = 128;
+    public const HOGLIN = 124;
+    public const PILLAGER = 114;
+    public const PIGLIN = 123;
+    public const PIGLIN_BRUTE = 127;
+    public const RAVAGER = 59;
+    public const STRIDER = 125;
+    public const TADPOLE = 133;
+    public const WANDERING_TRADER = 118;
+    public const WARDEN = 131;
+    public const ZOGLIN = 126;
+
+	// DO NOT REMOVE THIS ALIAS!
+    public const ZOMBIFIED_PIGLIN = 36;
+
+    // THE ACTUAL LEGACY IDS DIRECTLY TAKEN FROM POCKETMINE-MP ARE HERE!
+	// CANT EXTEND POCKETMINE-MP IDS BECAUSE OF FINAL CLASS
     public const CHICKEN = 10;
     public const COW = 11;
     public const PIG = 12;
@@ -32,7 +57,7 @@ final class EntityLegacyIds
     public const CREEPER = 33;
     public const SKELETON = 34;
     public const SPIDER = 35;
-    public const ZOMBIFIED_PIGLIN = 36;
+    public const ZOMBIE_PIGMAN = 36;
     public const SLIME = 37;
     public const ENDERMAN = 38;
     public const SILVERFISH = 39;
@@ -55,8 +80,6 @@ final class EntityLegacyIds
     public const AGENT = 56, LEARN_TO_CODE_MASCOT = 56;
     public const VINDICATOR = 57;
     public const PHANTOM = 58;
-
-    public const RAVAGER = 59;
 
     public const ARMOR_STAND = 61;
     public const TRIPOD_CAMERA = 62;
@@ -100,9 +123,7 @@ final class EntityLegacyIds
     public const LINGERING_POTION = 101;
     public const LLAMA_SPIT = 102;
     public const EVOCATION_FANG = 103;
-
-    public const EVOCATION_ILLAGER = 104, EVOKER = 104;
-
+    public const EVOCATION_ILLAGER = 104;
     public const VEX = 105;
     public const ICE_BOMB = 106;
     public const BALLOON = 107;
@@ -112,17 +133,4 @@ final class EntityLegacyIds
     public const TROPICALFISH = 111, TROPICAL_FISH = 111;
     public const COD = 112, FISH = 112;
     public const PANDA = 113;
-
-    public const PILLAGER = 114;
-    public const UNKNOWN_ONE = 115;
-    public const UNKNOWN_TWO = 116;
-    public const WANDERING_TRADER = 118;
-    public const FOX = 121;
-    public const BEE = 122;
-    public const PIGLIN = 123;
-    public const HOGLIN = 124;
-    public const UNKNOWN_THREE = 125;
-    public const ZOGLIN = 126;
-    public const PIGLIN_BRUTE = 127;
-    public const UNKNOWN_FOUR = 128;
 }
