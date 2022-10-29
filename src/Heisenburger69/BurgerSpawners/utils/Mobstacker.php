@@ -2,6 +2,7 @@
 
 namespace Heisenburger69\BurgerSpawners\utils;
 
+use pocketmine\nbt\tag\Tag;
 use pocketmine\entity\Living;
 use pocketmine\player\Player;
 use pocketmine\item\ItemFactory;
@@ -17,15 +18,13 @@ Modified to fix:
 TODO: Submit a PR to the plugin.
 */
 
-class Mobstacker
+class MobStacker
 {
     public const STACK = 'stack';
 
-    private SpawnerEntity $entity;
-
-    public function __construct(SpawnerEntity $entity)
-    {
-        $this->entity = $entity;
+    public function __construct(
+        private SpawnerEntity $entity
+    ) {
     }
 
     public function stack(): void
@@ -34,46 +33,57 @@ class Mobstacker
             $this->updateNameTag();
             return;
         }
+
         $mob = $this->findNearStack();
-        if ($mob == null) {
+        if (!$mob instanceof SpawnerEntity) {
             $this->entity->namedTag->setInt(self::STACK, 1);
-            $mobstack = $this;
+            $mobStack = $this;
         } else {
             $this->entity->flagForDespawn();
-            $mobstack = new Mobstacker($mob);
+            $mobStack = new MobStacker($mob);
             $count = $mob->namedTag->getInt(self::STACK);
             $mob->namedTag->setInt(self::STACK, ++$count);
         }
-        $mobstack->updateNameTag();
+        $mobStack->updateNameTag();
     }
 
     public function isStacked(): bool
     {
-        if ($this->entity->namedTag->getTag(self::STACK) !== null)
+        if ($this->entity->namedTag->getTag(self::STACK) instanceof Tag) {
             return true;
+        }
         return false;
     }
 
     public function updateNameTag(): void
     {
         $nbt = $this->entity->namedTag;
+
         $this->entity->setNameTagVisible(true);
         $this->entity->setNameTagAlwaysVisible(false);
-        if (ConfigManager::getToggle("enable-nametags")) $this->entity->setNameTag(C::colorize(str_replace(["{count}", "{name}"], [$nbt->getInt(self::STACK), $this->entity->getName()], ConfigManager::getMessage("mob-nametag"))));
+        if (ConfigManager::getToggle("enable-nametags")) {
+            $this->entity->setNameTag(C::colorize(str_replace(["{count}", "{name}"], [$nbt->getInt(self::STACK), $this->entity->getName()], ConfigManager::getMessage("mob-nametag"))));
+        }
         $this->entity->sendData($this->entity->getViewers());
     }
 
     public function findNearStack(int $range = 16): ?SpawnerEntity
     {
         $entity = $this->entity;
-        if ($entity->isFlaggedForDespawn() or $entity->isClosed()) return null;
+        if ($entity->isFlaggedForDespawn() || $entity->isClosed()) {
+            return null;
+        }
+
         $boundingBox = $entity->getBoundingBox()->expandedCopy($range, $range, $range);
         foreach ($entity->getWorld()->getNearbyEntities($boundingBox) as $nearbyEntity) {
-            if (!$nearbyEntity instanceof SpawnerEntity)
+            if (!$nearbyEntity instanceof SpawnerEntity) {
                 continue;
-            if ($entity->getPosition()->distance($nearbyEntity->getPosition()) <= $range and $entity::getNetworkTypeId() === $nearbyEntity::getNetworkTypeId()) {
-                $ae = new Mobstacker($nearbyEntity);
-                if ($ae->isStacked() && $ae->getStackAmount() < ConfigManager::getValue("max-stack") && !$this->isStacked()) return $nearbyEntity;
+            }
+            if ($entity->getPosition()->distance($nearbyEntity->getPosition()) <= $range && $entity::getNetworkTypeId() === $nearbyEntity::getNetworkTypeId()) {
+                $ae = new MobStacker($nearbyEntity);
+                if ($ae->isStacked() && $ae->getStackAmount() < ConfigManager::getValue("max-stack") && !$this->isStacked()) {
+                    return $nearbyEntity;
+                }
             }
         }
         return null;
@@ -83,21 +93,22 @@ class Mobstacker
     {
         $entity = $this->entity;
         $nbt = $entity->namedTag;
-        if (!$this->isStacked() or ($c = $this->getStackAmount()) <= 1) {
+        if (!$this->isStacked() || ($c = $this->getStackAmount()) <= 1) {
             return false;
         }
         $nbt->setInt(self::STACK, --$c);
+
         $event = new EntityDeathEvent($entity, $drops = $this->getDrops($entity));
         $event->call();
+        
         $this->updateNameTag();
-
         if (ConfigManager::getToggle("mobs-drop-items")) {
             foreach ($drops as $drop) {
                 if ($player instanceof Player && ConfigManager::getToggle("auto-inv")) {
                     $player->getInventory()->addItem($drop);
-                } else {
-                    $entity->getWorld()->dropItem($entity->getPosition(), $drop);
+                    continue;
                 }
+                $entity->getWorld()->dropItem($entity->getPosition(), $drop);
             }
         }
         if (ConfigManager::getToggle("mobs-drop-exp")) {
@@ -138,8 +149,7 @@ class Mobstacker
                 $drops[] = ItemFactory::getInstance()->get($dropString[0] ?? 0, $dropString[1] ?? 0)->setCount($dropString[2] ?? 1);
             }
             return $drops;
-        } else {
-            return $entity->getDrops();
         }
+        return $entity->getDrops();
     }
 }

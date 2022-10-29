@@ -35,15 +35,13 @@ class SpawnerCommand extends Command implements PluginOwned
             $sender->sendMessage(Main::PREFIX . C::RED . "/spawner <spawner/list> <count> <player>");
             return false;
         }
-        $entities = Utils::getEntityArrayList();
+        $entities = Utils::ENTITY_NAMES;
 
         if (isset($args[0]) && $args[0] === "list") {
             $list = implode(", ", $entities);
             $sender->sendMessage(Main::PREFIX . C::GOLD . "List of Available Spawners:\n" . C::YELLOW . $list);
             return true;
         }
-
-        $entityName = strtolower($args[0]);
 
         $count = 1;
         if (isset($args[1]) && (int)$args[1] >= 1) {
@@ -59,7 +57,7 @@ class SpawnerCommand extends Command implements PluginOwned
             }
         }
 
-        $spawner = Main::$instance->getSpawner($entityName, $count);
+        $spawner = Utils::getSpawnerFromName($args[0], $count);
         $spawnerName = $spawner->getCustomName();
 
         if ($player instanceof Player) {
@@ -70,10 +68,8 @@ class SpawnerCommand extends Command implements PluginOwned
             $sender->sendMessage(Main::PREFIX . $message);
             $player->getInventory()->addItem($spawner);
             return true;
-        } else {
-            $sender->sendMessage(Main::PREFIX . C::RED . "Player not found!");
         }
-
+        $sender->sendMessage(Main::PREFIX . C::RED . "Player not found!");
         return false;
     }
 

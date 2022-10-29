@@ -132,7 +132,6 @@ class Forms
                 $spawner = Forms::$usingSpawner[$player->getName()];
                 if ($spawner instanceof MobSpawnerTile) {
 
-                    $entityId = $spawner->entityId;
                     $count = (int)$response[1];
                     if ($count <= 0) return;
                     $max = $spawner->spawnCount;
@@ -154,8 +153,8 @@ class Forms
                         $spawner->close();
                     }
 
-                    $entityName = Utils::getEntityNameFromID($entityId);
-                    $spawnerItem = Main::$instance->getSpawner($entityName, $count);
+                    $entityName = Utils::getEntityNameFromID($spawner->entityIdentifier);
+                    $spawnerItem = Utils::getSpawnerFromName($entityName, $count);
                     $player->getInventory()->addItem($spawnerItem);
 
                     $player->sendMessage(Main::PREFIX . $message);

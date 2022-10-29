@@ -31,7 +31,7 @@ class SpawnEggCommand extends Command implements PluginOwned
             $sender->sendMessage(Main::PREFIX . C::RED . "/spawnegg <egg> <count> <player>");
             return false;
         }
-        $entities = Utils::getEntityArrayList();
+        $entities = Utils::ENTITY_NAMES;
 
         if (isset($args[0]) && $args[0] === "list") {
             $list = implode(", ", $entities);
@@ -66,16 +66,15 @@ class SpawnEggCommand extends Command implements PluginOwned
             }
         }
 
-        $egg = Main::$instance->getSpawnEgg($entityName, $count);
+        $egg = Utils::getSpawnEggFromName($entityName, $count);
         $eggName = $egg->getCustomName();
 
         if ($player instanceof Player) {
             $sender->sendMessage(Main::PREFIX . "Given $eggName to " . $player->getName());
             $player->getInventory()->addItem($egg);
             return true;
-        } else {
-            $sender->sendMessage(Main::PREFIX . C::RED . "Player not found!");
         }
+        $sender->sendMessage(Main::PREFIX . C::RED . "Player not found!");
         return false;
     }
 

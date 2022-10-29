@@ -11,7 +11,6 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\utils\TextFormat as C;
 use pocketmine\data\bedrock\EnchantmentIds;
 use pocketmine\data\bedrock\EnchantmentIdMap;
-use Heisenburger69\BurgerSpawners\utils\Utils;
 use pocketmine\block\MonsterSpawner as PMSpawner;
 use Heisenburger69\BurgerSpawners\utils\ConfigManager;
 use Heisenburger69\BurgerSpawners\tiles\MobSpawnerTile;
@@ -63,9 +62,10 @@ class SpawnerBlock extends PMSpawner
                 $nbt = new CompoundTag();
                 $count = $tile->spawnCount;
                 $spawner = ItemFactory::getInstance()->get(ItemIds::MOB_SPAWNER, 0, $count, $nbt);
-                $spawner->setCustomName(C::RESET . Utils::getEntityNameFromID($tile->entityId) . " Spawner");
+                
+                $spawner->setCustomName(C::RESET . $tile->getName());
                 $this->getPosition()->getWorld()->dropItem($this->getPosition()->add(0.5, 0.5, 0.5), $spawner);
-    
+
                 (new SpawnerBreakEvent($player, $tile))->call();
             }
         }
@@ -75,11 +75,9 @@ class SpawnerBlock extends PMSpawner
     public function onScheduledUpdate(): void
     {
         $tile = $this->getPosition()->getWorld()->getTile($this->getPosition()->asVector3());
-
-        if (!$tile instanceof MobSpawnerTile)
-            return;
-
-        $tile->onUpdate();
+        if ($tile instanceof MobSpawnerTile) {
+            $tile->onUpdate();
+        }
 
         parent::onScheduledUpdate();
     }
@@ -92,13 +90,16 @@ class SpawnerBlock extends PMSpawner
         if (mt_rand(0, 100) > (int)ConfigManager::getValue("explosion-drop-chance")) {
             return false;
         }
+        
         $tile = $this->getPosition()->getWorld()->getTile($this->getPosition()->asVector3());
         if ($tile instanceof MobSpawnerTile) {
             $nbt = new CompoundTag();
-            $nbt->setInt(MobSpawnerTile::ENTITY_ID, (int) $tile->entityId);
+            $nbt->setInt(MobSpawnerTile::ENTITY_ID, $tile->entityId);
+            
             $count = $tile->spawnCount;
             $spawner = ItemFactory::getInstance()->get(ItemIds::MOB_SPAWNER, 0, $count, $nbt);
-            $spawner->setCustomName(C::RESET . Utils::getEntityNameFromID($tile->entityId) . " Spawner");
+            
+            $spawner->setCustomName(C::RESET . $tile->getName());
             $this->getPosition()->getWorld()->dropItem($this->getPosition()->add(0.5, 8, 0.5), $spawner);
             return true;
         }

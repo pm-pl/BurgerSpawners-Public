@@ -20,13 +20,11 @@ use pocketmine\entity\EntityDataHelper;
 use pocketmine\data\bedrock\EntityLegacyIds;
 use Heisenburger69\BurgerSpawners\utils\Utils;
 use Heisenburger69\BurgerSpawners\items\SpawnEgg;
-use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 
 class EntityManager
 {
     public static function init(): void
     {
-        self::registerEntity(Bat::class, ['Bat', EntityIds::BAT]);
         foreach (Utils::getNamesID() as $entityId => $entityName) {
             $class = Utils::getClassFromId($entityId);
             if ($class === null) {
@@ -43,7 +41,7 @@ class EntityManager
     {
         /** @phpstan-ignore-next-line */
         EntityFactory::getInstance()->register($className, function (World $world, CompoundTag $nbt) use ($className): Entity {
-            $entity = new $className(EntityDataHelper::parseLocation($nbt, $world), $nbt);;
+            $entity = new $className(EntityDataHelper::parseLocation($nbt, $world), $nbt);
             if (!$entity instanceof Entity) {
                 throw new Exception("$className is not an instance of Entity");
             }
@@ -62,11 +60,10 @@ class EntityManager
         } catch (ReflectionException $ex) {
             return false;
         }
-
         $eggName = Utils::getEntityNameFromID($entityId) . " Spawn Egg";
         $egg = new SpawnEgg(new ItemIdentifier(ItemIds::SPAWN_EGG, $meta), $eggName);
         
-        $egg->setEntityId($entityId);
+        $egg->setEntityIdentifier($entityId);
         $egg->setCustomName(TextFormat::RESET . $eggName);
 
         ItemFactory::getInstance()->register($egg, true);
